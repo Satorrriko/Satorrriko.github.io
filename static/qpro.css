@@ -1,0 +1,68 @@
+.qpro{
+    width:15.3vw;
+    height:18vw;
+    position:relative;
+    float:right
+}
+.qpro img{
+    position:absolute;
+    display:inline
+}
+.qp-hair{
+    left:12.94%
+}
+.qp-hair,.qp-head{
+    top:5%;
+    width:77.06%;
+    height:88%
+}
+.qp-head{
+    left:14.71%
+}
+.qp-face{
+    left:29.41%;
+    top:15%;
+    width:44.17%;
+    height:39.5%
+}
+.qp-body{
+    left:14.71%;
+    top:5%;
+    width:76.47%;
+    height:88%
+}
+.qp-arm-r{
+    left:12.35%;
+    width:38.82%
+}
+.qp-arm-l,.qp-arm-r{
+    top:44.5%;
+    height:48.5%
+}
+.qp-arm-l{
+    left:50%;
+    width:41.76%
+}
+.qp-leg-r{
+    left:26.47%
+}
+.qp-leg-l,.qp-leg-r{
+    top:61.25%;
+    width:30%;
+    height:33%
+}
+.qp-leg-l{
+    left:42.65%
+}
+.qp-hand-r{
+    left:1.47%;
+    top:0;
+    width:62.35%;
+    height:88%
+}
+.qp-hand-l{
+    left:44.12%;
+    top:0;
+    width:47.65%;
+    height:88%
+}
