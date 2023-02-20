@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="songs_info20221211.js"></script>
+    <script>
+        clear_type = {
+            '0': 'NO PLAY', '1': 'FAILED', '2': 'ASSIST CLEAR', '3': 'EASY CLEAR', '4': 'CLEAR', '5': 'HARD CLEAR', '6': 'EX HARD CLEAR', '7': 'FULL COMBO'
+        }
+        const version = {
+            '0': '1st&substream',
+            '1': '1st&substream',
+            '2': '2nd style',
+            '3': '3rd style',
+            '4': '4th style',
+            '5': '5th style',
+            '6': '6th style',
+            '7': '7th style',
+            '8': '8th style',
+            '9': '9th style',
+            '10': '10th style',
+            '11': 'IIDX RED',
+            '12': 'HAPPY SKY',
+            '13': 'DistorteD',
+            '14': 'GOLD',
+            '15': 'DJ TROOPERS',
+            '16': 'EMPRESS',
+            '17': 'SIRIUS',
+            '18': 'Resort Anthem',
+            '19': 'Lincle',
+            '20': 'tricoro',
+            '21': 'SPADA',
+            '22': 'PENDUAL',
+            '23': 'copula',
+            '24': 'SINOBUZ',
+            '25': 'CANNON BALLERS',
+            '26': 'Rootage',
+            '27': 'HEROIC VERSE',
+            '28': 'BISTROVER',
+            '29': 'CastHour',
+            '30': 'RESIDENT',
+        }
+        const columns = ['id', 'バージョン', 'タイトル', 'ジャンル', 'アーティスト', 'プレー回数', 'BEGINNER 難易度', 'BEGINNER EXスコア', 'BEGINNER PGreat', 'BEGINNER Great', 'BEGINNER ミスカウント', 'BEGINNER クリアタイプ', 'BEGINNER DJ LEVEL', 'NORMAL 難易度', 'NORMAL EXスコア', 'NORMAL PGreat', 'NORMAL Great', 'NORMAL ミスカウント', 'NORMAL クリアタイプ', 'NORMAL DJ LEVEL', 'HYPER 難易度', 'HYPER EXスコア', 'HYPER PGreat', 'HYPER Great', 'HYPER ミスカウント', 'HYPER クリアタイプ', 'HYPER DJ LEVEL', 'ANOTHER 難易度', 'ANOTHER EXスコア', 'ANOTHER PGreat', 'ANOTHER Great', 'ANOTHER ミスカウント', 'ANOTHER クリアタイプ', 'ANOTHER DJ LEVEL', 'LEGGENDARIA 難易度', 'LEGGENDARIA EXスコア', 'LEGGENDARIA PGreat', 'LEGGENDARIA Great', 'LEGGENDARIA ミスカウント', 'LEGGENDARIA クリアタイプ', 'LEGGENDARIA DJ LEVEL', '最終プレー日時'];
+
+        function handleFileUpload() {
+            var file = document.getElementById("fileInput").files[0];
+            var reader = new FileReader();
+            reader.onload = function (event) {
+                var xml = event.target.result;
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(xml, "text/xml");
+                var mTags = doc.getElementsByTagName("m");
+
+                var mTagData = [];
+                var currentDate = new Date();
+                var dateString = currentDate.toISOString().substring(0, 19).replace('T', ' ');
+
+                for (var i = 0; i < mTags.length; i++) {
+                    // mTagData.push(mTags[i].textContent);
+                    let splited = mTags[i].textContent.split(" ")
+                    if (splited[0] == "-1") {
+                        song_info = songs_info[splited[1]]
+                        if (splited[7] != "0" || splited[8] != "0" || splited[9] != "0" || splited[10] != "0" || splited[11] != "0") {
+                            mTagData.push(
+                                [
+                                    version[splited[1].slice(0, -3)],
+                                    song_info['title'],
+                                    song_info['genre'],
+                                    song_info['artist'],
+                                    0,
+                                    song_info['spb'],
+                                    splited[7],
+                                    0,
+                                    0,
+                                    miss_count(splited[12]),
+                                    clear_type[splited[2]],
+                                    djlevel(splited[12], splited[7], song_info['spb_n']),
+
+                                    song_info['spn'],
+                                    splited[8],
+                                    0,
+                                    0,
+                                    miss_count(splited[13]),
+                                    clear_type[splited[3]],
+                                    djlevel(splited[13], splited[8], song_info['spn_n']),
+
+                                    song_info['sph'],
+                                    splited[9],
+                                    0,
+                                    0,
+                                    miss_count(splited[14]),
+                                    clear_type[splited[4]],
+                                    djlevel(splited[14], splited[9], song_info['sph_n']),
+
+                                    song_info['spa'],
+                                    splited[10],
+                                    0,
+                                    0,
+                                    miss_count(splited[15]),
+                                    clear_type[splited[5]],
+                                    djlevel(splited[15], splited[10], song_info['spa_n']),
+
+                                    song_info['spl'],
+                                    splited[11],
+                                    0,
+                                    0,
+                                    miss_count(splited[16]),
+                                    clear_type[splited[6]],
+                                    djlevel(splited[16], splited[11], song_info['spl_n']),
+                                    dateString
+                                ]
+                            )
+                        }
+
+                    }
+                }
+
+                let csv = '';
+                csv += columns.slice(1).join(',') + '\n'
+                csv += convertToCSV(mTagData)
+
+                var out_text = document.getElementById("output")
+                out_text.textContent = csv
+            };
+            reader.readAsText(file);
+        }
+        function djlevel(miss, exscore, note) {
+            if (miss == "-1") {
+                return "---"
+            }
+            let rate = Number(exscore) / (2 * Number(note))
+            if (rate < (1 / 9)) {
+                return 'F';
+            } else if (rate < (2 / 9)) {
+                return 'E';
+            } else if (rate < (3 / 9)) {
+                return 'D';
+            } else if (rate < (4 / 9)) {
+                return 'C';
+            } else if (rate < (5 / 9)) {
+                return 'B';
+            } else if (rate < (6 / 9)) {
+                return 'A';
+            } else if (rate < (7 / 9)) {
+                return 'AA';
+            } else {
+                return 'AAA';
+            }
+        }
+        function miss_count(num) {
+            if (num == "-1") {
+                return "---"
+            } else {
+                return num
+            }
+        }
+        function convertToCSV(arr) {
+            const csvRows = [];
+            for (let i = 0; i < arr.length; i++) {
+                const row = [];
+                for (let j = 0; j < arr[i].length; j++) {
+                    let cellValue = '' + arr[i][j];
+                    if (cellValue.includes(',')) {
+                        cellValue = '"' + cellValue.replace(/"/g, '""') + '"';
+                    }
+                    if (cellValue.includes('\n')) {
+                        cellValue = '"' + cellValue.replace(/"/g, '""') + '"';
+                    }
+                    row.push(cellValue);
+                }
+                csvRows.push(row.join(','));
+            }
+            return csvRows.join('\n');
+        }
+    </script>
+</head>
+
+<body>
+    <input type="file" id="fileInput" onchange="handleFileUpload()" />
+    <textarea id="output"></textarea>
+</body>
+
+</html>
