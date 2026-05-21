@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>命令行终端</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            padding: 12px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .terminal {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 12px 14px;
+            max-width: 780px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #30363d;
+        }
+
+
+        .date-counter {
+            color: #58a6ff;
+            font-size: 12px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        .terminal-body {
+            line-height: 1.25;
+            font-size: 13px;
+        }
+
+        .prompt {
+            color: #58a6ff;
+            margin-right: 4px;
+        }
+
+        .command {
+            color: #c9d1d9;
+        }
+
+        .command-history {
+            max-height: 420px;
+            overflow-y: auto;
+            margin-bottom: 6px;
+            padding: 6px 8px;
+            background-color: #0d1117;
+            border-radius: 2px;
+        }
+
+        .command-line {
+            display: flex;
+            align-items: center;
+            margin-top: 2px;
+        }
+
+        .command-input {
+            background-color: transparent;
+            border: none;
+            color: #c9d1d9;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            outline: none;
+            flex: 1;
+            padding: 0;
+            margin: 0;
+            caret-color: #c9d1d9;
+            width: 100%;
+        }
+
+        .command-input::placeholder {
+            color: #6e7681;
+        }
+
+        .command-input::selection {
+            background-color: #264f78;
+            color: #c9d1d9;
+        }
+
+        /* 块状光标效果 - 使用caret-shape */
+        @supports (caret-shape: block) {
+            .command-input {
+                caret-shape: block;
+            }
+        }
+
+        .command-history-item {
+            margin: 0;
+            padding: 0;
+        }
+
+        .command-history-item .command-line {
+            margin: 0;
+        }
+
+        .api-response {
+            margin-top: 0;
+            padding-left: 2ch;
+            color: #7ee787;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .api-error {
+            color: #f85149;
+        }
+
+        .api-error::before {
+            content: ":( ERROR: ";
+            color: #f85149;
+            font-weight: bold;
+        }
+
+
+        .command-history::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .command-history::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+
+        .command-history::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+
+        .command-history::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="date-counter" id="dateCounter"></div>
+        </div>
+        <div class="terminal-body">
+            <div class="command-history" id="commandHistory">
+            </div>
+            <div class="command-line">
+                <span class="prompt">$</span>
+                <input type="text" 
+                       class="command-input" 
+                       id="commandInput" 
+                       placeholder=""
+                       autocomplete="off">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Socket.IO 客户端脚本，用于 /send 实时会话 -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <script>
+function _0xdecode(_0xencoded){var _0xchars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';var _0xoutput='';var _0xchr1,_0xchr2,_0xchr3;var _0xenc1,_0xenc2,_0xenc3,_0xenc4;var _0xi=0;_0xencoded=_0xencoded.replace(/[^A-Za-z0-9+/=]/g,'');while(_0xi<_0xencoded.length){_0xenc1=_0xchars.indexOf(_0xencoded.charAt(_0xi++));_0xenc2=_0xchars.indexOf(_0xencoded.charAt(_0xi++));_0xenc3=_0xchars.indexOf(_0xencoded.charAt(_0xi++));_0xenc4=_0xchars.indexOf(_0xencoded.charAt(_0xi++));_0xchr1=(_0xenc1<<2)|(_0xenc2>>4);_0xchr2=((_0xenc2&15)<<4)|(_0xenc3>>2);_0xchr3=((_0xenc3&3)<<6)|_0xenc4;_0xoutput=_0xoutput+String.fromCharCode(_0xchr1);if(_0xenc3!=64){_0xoutput=_0xoutput+String.fromCharCode(_0xchr2);}if(_0xenc4!=64){_0xoutput=_0xoutput+String.fromCharCode(_0xchr3);}}return _0xoutput;}
+
+function _0x007d(){var _0x007e=9563;var _0x007f=8047;var _0x0080=_0x007e+_0x007f;return _0x0080;}
+function _0x0081(){var _0x0082=2690;var _0x0083=4696;var _0x0084=_0x0082+_0x0083;return _0x0084;}
+function _0x0085(){var _0x0086=1814;var _0x0087=4670;var _0x0088=_0x0086+_0x0087;return _0x0088;}
+function _0x0089(){var _0x008a=3374;var _0x008b=3127;var _0x008c=_0x008a+_0x008b;return _0x008c;}
+function _0x008d(){var _0x008e=6353;var _0x008f=4745;var _0x0090=_0x008e+_0x008f;return _0x0090;}
+
+(function(){var _0xdbg1=function(){return new Date().getTime()};var _0xdbg2=_0xdbg1();debugger;var _0xdbg3=_0xdbg1();if(_0xdbg3-_0xdbg2>100){while(true){(function(){})()}}})();
+
+
+        const _0x0041 = _0xdecode('aHR0cHM6Ly9zYXRvcnJyaWtvLnRvcC9zdG9yZS8=');
+        // 统计接口
+        const _0x002c = _0xdecode('aHR0cHM6Ly9zYXRvcnJyaWtvLnRvcC9pbmRleA==');
+        // _0x0034 连接地址
+        const _0x001f = _0xdecode('aHR0cHM6Ly9zYXRvcnJyaWtvLnRvcA==');
+        const _0x0014 = document.getElementById(_0xdecode('Y29tbWFuZElucHV0'));
+        const _0x000a = document.getElementById(_0xdecode('Y29tbWFuZEhpc3Rvcnk='));
+
+        // /_0x0068 实时会话状态
+        let _0x0004 = false;
+        let _0x0023 = null;
+
+        // 标记最后一条命令的发送状态：[_0x0043] / [_0x0075]
+        function _0x0001(_0x0021) {
+            const _0x0032 = _0x000a.querySelector(_0xdecode('LmNvbW1hbmQtaGlzdG9yeS1pdGVtOmxhc3QtY2hpbGQ='));
+            if (!_0x0032) return;
+            const _0x003f = _0x0032.querySelector(_0xdecode('LmNvbW1hbmQ='));
+            if (!_0x003f) return;
+
+            // 先去掉已有的状态标记
+            _0x003f.textContent = _0x003f.textContent._0x003e(/\_0x0079\[(_0x0043|_0x0075)\]$/, '');
+
+            if (_0x0021) {
+                _0x003f.textContent = _0x003f.textContent + _0xdecode('IA==') + _0x0021;
+            }
+        }
+
+        // 添加命令历史项
+        function _0x0002(_0x0048, _0x0033, _0x003d = false, _0x003c = false) {
+            const _0x0019 = document.createElement(_0xdecode('ZGl2'));
+            _0x0019.className = _0xdecode('Y29tbWFuZC1oaXN0b3J5LWl0ZW0=');
+            if (_0x003c) {
+                _0x0019.dataset._0x003c = _0xdecode('dHJ1ZQ==');
+            }
+            
+            const _0x0018 = document.createElement(_0xdecode('ZGl2'));
+            _0x0018.className = _0xdecode('Y29tbWFuZC1saW5l');
+            _0x0018.innerHTML = `
+                <_0x005d class=_0xdecode('cHJvbXB0')>$</_0x005d>
+                <_0x005d class=_0xdecode('Y29tbWFuZA==')>${_0x001d(_0x0048)}</_0x005d>
+            `;
+            
+            _0x0019.appendChild(_0x0018);
+            
+            if (_0x0033) {
+                const _0x0016 = document.createElement(_0xdecode('ZGl2'));
+                _0x0016.className = `_0x006b-_0x0033 ${_0x003d ? _0xdecode('YXBpLWVycm9y') : ''}`;
+                _0x0016.textContent = _0x0033;
+                _0x0019.appendChild(_0x0016);
+            }
+            
+            _0x000a.appendChild(_0x0019);
+            _0x000a._0x0029 = _0x000a._0x0012;
+        }
+
+        // 更新最后一个命令的响应
+        function _0x0000(_0x0033, _0x003d) {
+            const _0x0032 = _0x000a.querySelector(_0xdecode('LmNvbW1hbmQtaGlzdG9yeS1pdGVtW2RhdGEtcGVuZGluZz1fX1NUUl8wMDAwMDJfX10='));
+            if (_0x0032) {
+                _0x0032.removeAttribute(_0xdecode('ZGF0YS1wZW5kaW5n'));
+                
+                const _0x0016 = document.createElement(_0xdecode('ZGl2'));
+                _0x0016.className = `_0x006b-_0x0033 ${_0x003d ? _0xdecode('YXBpLWVycm9y') : ''}`;
+                _0x0016.textContent = _0x0033;
+                _0x0032.appendChild(_0x0016);
+                _0x000a._0x0029 = _0x000a._0x0012;
+            }
+        }
+
+        // 处理命令
+        function _0x000f(_0x0048) {
+            if (!_0x0048._0x005e()) {
+                return;
+            }
+
+            const _0x000b = _0x0048._0x005e();
+
+            // 立即显示命令
+            _0x0002(_0x000b, '', false, true);
+
+            // 命令匹配
+            if (_0x000b === _0xdecode('L2hlbHA=')) {
+                const _0x0039 = `可用命令:
+/_0x005f - 显示帮助信息
+/_0x0058 - 显示最近7天_0xdecode('5Li75Lq6')消息统计图表
+/_0x0068 <_0x003b> - 发一次性消息
+/_0x0068 _0x0050 - 进入 /_0x0068 实时会话模式
+/_0x0068 _0x005c - 退出 /_0x0068 实时会话模式
+/SHENMIXIAOXI <_0x0063> - 查看神秘消息
+
+`;
+                _0x0000(_0x0039, false);
+            } else if (_0x000b === _0xdecode('L2luZGV4')) {
+                _0x0009();
+            } else if (_0x000b === _0xdecode('L3NlbmQ=') || _0x000b._0x001b(_0xdecode('L3NlbmQg'))) {
+                // 提取 /_0x0068 后面的内容
+                const _0x006e = _0x000b._0x0026(6)._0x005e();
+
+                if (_0x006e === _0xdecode('c3RhcnQ=')) {
+                    _0x0005();
+                } else if (_0x006e === _0xdecode('c3RvcA==')) {
+                    _0x0008();
+                } else if (_0x006e) {
+                    // 在会话模式中优先用 _0x0034 发送
+                    if (_0x0004 && _0x0023 && _0x0023._0x0027) {
+                        // 把刚刚显示的这一行命令标记为 [_0x0043]
+                        _0x0001(_0xdecode('W1NlbmRpbmdd'));
+
+                        _0x0023.emit(_0xdecode('Y2xpZW50X21lc3NhZ2U='), {
+                            _0x0066: _0x006e,
+                            _0x002a: new Date()._0x0017()
+                        });
+                    } else if (_0x0004) {
+                        // 会话模式下但连接不可用，不再回退到 HTTP，直接提示错误
+                        _0x0001('');
+                        _0x0000(_0xdecode('5a6e5pe25Lya6K+d5pyq6L+e5o6l77yM6K+36YeN5paw5omn6KGMIC9zZW5kIHN0YXJ044CC'), true);
+                    } else {
+                        // 非会话模式，走原来的 HTTP 一次性发送
+                        _0x0007(_0x006e);
+                    }
+                } else {
+                    _0x0000(_0xdecode('6ZSZ6K+vOiAvc2VuZCDlkb3ku6TpnIDopoHmj5Dkvpvmtojmga/lhoXlrrlcbuekuuS+izogL3NlbmQgaGVsbG8gd29ybGQg5oiWIC9zZW5kIHN0YXJ0'), true);
+                }
+            } else if (_0x000b === _0xdecode('L1NIRU5NSVhJQU9YSQ==') || _0x000b === _0xdecode('L+elnuenmOa2iOaBrw==') || _0x000b._0x001b(_0xdecode('L1NIRU5NSVhJQU9YSSA=')) || _0x000b._0x001b(_0xdecode('L+elnuenmOa2iOaBryA='))) {
+                // 处理神秘消息命令
+                let _0x0053 = '';
+                if (_0x000b._0x001b(_0xdecode('L1NIRU5NSVhJQU9YSSA='))) {
+                    _0x0053 = _0x000b._0x0026(14)._0x005e();
+                } else if (_0x000b._0x001b(_0xdecode('L+elnuenmOa2iOaBryA='))) {
+                    _0x0053 = _0x000b._0x0026(5)._0x005e();
+                }
+                
+                if (_0x0053 === _0xdecode('MzU=')) {
+                    _0x0011(`主人 我现在在回贵阳的飞机上 还是有点困 所以有点支离破碎 但是我迫不及待想见你了
+今天收东西的时候我想找一些可以带给你的小物件 很可惜没找到 准备回贵阳的家找 有些一直没机会送的时尚精品小垃圾它，他们躺在我桌上的铁盒子里，躺了很久很久，从19年甚至更早躺到现在。现在它们可以来到你身边了
+你贵阳那天我我看着航旅纵横的飞机信息 看你什么时候在什么高度 飞机是什么速度 我看到飞机起飞就爬升到稳定的高度，稳定后立马速度翻倍 后半段有些颠簸，可能因为贵阳在下雨。总之是平稳降落。
+现在我也坐上了飞机 我觉得坐飞机很有仪式感 如果是旅行 我愿意靠窗坐 然后看窗外的云和阳光 有时候在地面上看着天，阴沉沉的 但是云层上却阳光明媚，对我来说这里像一个永远没有结束的梦，飞机轰鸣但是我却觉得静得出奇 这几天合肥都是晴天 虽然有些雾霾 灰灰的 没有南京市区的天好看 我喜欢阳光的冬天午后 闻太阳的味道 和螨虫被杀死的味道
+我选了一个很靠前的靠窗座位 我带了一个小箱子 不用托运的箱子 我想不用等托运的行李 快点和你见面
+我收东西的时候没有收衣服 我家里应该还有一些没寄过来的 可能就不是洗衣粉的香香味了，应该是螨虫味的 螨虫和香水 你喜欢哪个呢 出于私心的话，我想让你都记住 鸟鸟的味道我寄过来之前也闻过 我觉得鸟鸟在被窝里蒙得很有家的味道了 我喜欢鸟鸟的味道 我也想记住你的味道 想闻你的头发 你嘴巴里的人味 你的床 你的洗衣粉的味道 k6小草的味道 你的毛绒猫猫的味道--我该不会是狗吧
+主人 这个小页面还有一个功能。虽然我觉得和小本本很重合了，就是你在这边用/send发送的消息我都能在服务器上看见。服务器还没搭好，过年期间给我一点时间 我做好这个功能就能看到你发的消息拉
+除此之外，我还可能在这里记录一些别的东西 放一些小应用 记得偷偷来看
+情人节快乐 我想和你一起度过这个悠长假期
+
+2026.2.13
+于航班PN6452 天和云的分界线
+
+`);
+                } else if (_0x0053 === _0xdecode('MTAw')) {
+                    _0x0011(`主人：
+
+听你说我才知道数字已经变成3位数了。再给你道歉，我完全忘了这档事，甚至忘记cli上有个计时功能。然后这个网站功能也经很久没更新了；；我会弄点好玩的东西放上来的。主人如果你还有点生气，我会想办法补偿你的。我真的很开心主人能够在桌上给我的这个小网站分块地方。
+我也很享受主人和我在一起的日子。100天前开始，我的生活发生了翻天覆地的变化。我从没想过我们可以一起去公园、打耳洞、泡澡、去游乐场、去唱歌，去别的小区拍樱花、去做戒指、在滑板池边上坐着吹风、堆雪人。我一个人应该是没有这些机会的。我们现在还一起做些很厉害的创作。都是多亏了主人我现在才能够这样。
+主人，我想我们永远腻在一起，不管这个数字是多少。然后一起面对遇到的困难。主人，今天辛苦了，我们早早睡觉吧。
+
+20260420
+下班后
+
+`);
+                } else {
+                    _0x0000(_0xdecode('6ZSZ6K+vOiDpnIDopoHmraPnoa7nmoTlj4LmlbBcbuekuuS+izogL1NIRU5NSVhJQU9YSSAxMDA='), true);
+                }
+            } else {
+                // 不匹配任何命令，显示错误提示
+                _0x0000(_0xdecode('VXNlIGAvaGVscGAgdG8gZ2V0IGhlbHAu'), true);
+            }
+        }
+
+        // 流式输出文本
+        function _0x0011(_0x0066) {
+            const _0x0032 = _0x000a.querySelector(_0xdecode('LmNvbW1hbmQtaGlzdG9yeS1pdGVtW2RhdGEtcGVuZGluZz1fX1NUUl8wMDAwMDRfX10='));
+            
+            if (!_0x0032) return;
+            
+            // 创建响应元素
+            const _0x0016 = document.createElement(_0xdecode('ZGl2'));
+            _0x0016.className = _0xdecode('YXBpLXJlc3BvbnNl');
+            _0x0032.appendChild(_0x0016);
+            
+            // 逐字符输出
+            let _0x0058 = 0;
+            const _0x0035 = setInterval(() => {
+                if (_0x0058 < _0x0066.length) {
+                    _0x0016.textContent = _0x0066._0x0026(0, _0x0058 + 1);
+                    _0x0058++;
+                    // 滚动到底部
+                    _0x000a._0x0029 = _0x000a._0x0012;
+                } else {
+                    clearInterval(_0x0035);
+                    _0x0032.removeAttribute(_0xdecode('ZGF0YS1wZW5kaW5n'));
+                }
+            }, 100); // 每100毫秒输出一个字符
+        }
+
+        // 获取7天统计数据并渲染字符画图表
+        _0x0056 function _0x0009() {
+            try {
+                const _0x0033 = await fetch(_0x002c, {
+                    _0x004a: _0xdecode('R0VU'),
+                    _0x0040: {
+                        _0xdecode('Q29udGVudC1UeXBl'): _0xdecode('YXBwbGljYXRpb24vanNvbg=='),
+                    }
+                });
+
+                if (!_0x0033._0x0077) {
+                    throw new Error(`HTTP错误: ${_0x0033._0x0049} ${_0x0033._0x0021}`);
+                }
+
+                const _0x004b = await _0x0033._0x005a();
+                
+                if (_0x004b._0x0049 !== _0xdecode('c3VjY2Vzcw==') || !_0x004b._0x005b) {
+                    throw new Error(_0xdecode('6L+U5Zue5pWw5o2u5qC85byP6ZSZ6K+v'));
+                }
+
+                // 生成字符画图表
+                const _0x0028 = _0x0006(_0x004b._0x005b);
+                _0x0000(_0x0028, false);
+                
+            } catch (_0x0055) {
+                _0x0000(`获取统计数据失败: ${_0x0055._0x003b}`, true);
+            }
+        }
+
+        // 渲染ASCII字符画图表 - 横向条形图（无边框对齐版）
+        function _0x0006(_0x005b) {
+            if (!_0x005b || _0x005b.length === 0) {
+                return _0xdecode('5pqC5peg5pWw5o2u');
+            }
+
+            const _0x0038 = Math._0x0073(..._0x005b._0x0074(_0x007c => _0x007c._0x0059), 1);
+            const _0x0010 = 40;
+            const _0x001c = 65; // 固定行长度
+            
+            let _0x0054 = '';
+            
+            // 标题
+            const title = _0xdecode('5Li75Lq65oyH5pWw');
+            _0x0054 += title._0x004d(_0x001c, _0xdecode('IA==')) + _0xdecode('XG4=');
+            _0x0054 += ''._0x004d(_0x001c, _0xdecode('LQ==')) + _0xdecode('XG4=');
+            
+            // 为每一天生成一行横向条形图
+            for (const _0x006f _0x0076 _0x005b) {
+                const _0x002e = _0x006f._0x0065._0x0026(5)._0x003e(_0xdecode('LQ=='), _0xdecode('Lw=='));
+                const _0x0059 = _0x006f._0x0059;
+                const _0x001e = _0x006f._0x000d > 0 
+                    ? ((_0x0059 / _0x006f._0x000d) * 100)._0x0045(1) 
+                    : _0xdecode('MC4w');
+                
+                const _0x002d = Math._0x0057((_0x0059 / _0x0038) * _0x0010);
+                const _0x0069 = _0xdecode('4paI')._0x004e(_0x002d);
+                const _0x0052 = _0xdecode('4paR')._0x004e(_0x0010 - _0x002d);
+                
+                // 构建这一行: [日期] [条形图] [数值]
+                let _0x0061 = `${_0x002e} |${_0x0069}${_0x0052}| ${_0x0059.toString()._0x0030(3)} (${_0x001e._0x0030(5)}%)`;
+                _0x0061 = _0x0061._0x004d(_0x001c, _0xdecode('IA=='));
+                _0x0054 += _0x0061 + _0xdecode('XG4=');
+            }
+            
+            // 分隔线
+            _0x0054 += ''._0x004d(_0x001c, _0xdecode('LQ==')) + _0xdecode('XG4=');
+            
+            // X轴刻度
+            const _0x0024 = Math._0x0064(_0x0038 / 5);
+            let _0x002b = _0xdecode('MA==');
+            for (let _0x007a = 1; _0x007a <= 5; _0x007a++) {
+                const value = Math._0x006c(_0x007a * _0x0024, _0x0038);
+                const _0x002f = 1 + Math._0x0057((_0x007a / 5) * _0x0010);
+                _0x002b = _0x002b._0x004d(_0x002f, _0xdecode('IA=='));
+                _0x002b += value.toString();
+            }
+            _0x002b = (_0xdecode('ICAgIA==') + _0x002b)._0x004d(_0x001c, _0xdecode('IA=='));
+            _0x0054 += _0x002b + _0xdecode('XG4=');
+            
+            // 汇总信息
+            const _0x0020 = _0x005b._0x004c((_0x006d, _0x007c) => _0x006d + _0x007c._0x0059, 0);
+            const _0x0037 = _0x005b._0x004c((_0x006d, _0x007c) => _0x006d + _0x007c._0x000d, 0);
+            const _0x0025 = (_0x0020 / 7)._0x0045(1);
+            
+            _0x0054 += _0xdecode('XG4=');
+            _0x0054 += _0xdecode('5rGH5oC75L+h5oGv')._0x004d(_0x001c, _0xdecode('IA==')) + _0xdecode('XG4=');
+            _0x0054 += ''._0x004d(_0x001c, _0xdecode('LQ==')) + _0xdecode('XG4=');
+            _0x0054 += `7天总计: ${_0x0020} 条`._0x004d(_0x001c, _0xdecode('IA==')) + _0xdecode('XG4=');
+            _0x0054 += `日均消息: ${_0x0025} 条`._0x004d(_0x001c, _0xdecode('IA==')) + _0xdecode('XG4=');
+            _0x0054 += `总消息数: ${_0x0037} 条`._0x004d(_0x001c, _0xdecode('IA==')) + _0xdecode('XG4=');
+            _0x0054 += `主人比例: ${_0x0037 > 0 ? ((_0x0020/_0x0037)*100)._0x0045(1) : _0xdecode('MC4w')}%`._0x004d(_0x001c, _0xdecode('IA=='));
+            
+            return _0x0054;
+        }
+
+        // 发送命令到API
+        _0x0056 function _0x0007(_0x003b) {
+            try {
+                const _0x0033 = await fetch(_0x0041, {
+                    _0x004a: _0xdecode('UE9TVA=='),
+                    _0x0040: {
+                        _0xdecode('Q29udGVudC1UeXBl'): _0xdecode('YXBwbGljYXRpb24vanNvbg=='),
+                    },
+                    _0x0060: JSON.stringify({
+                        _0x0048: _0x003b,
+                        _0x002a: new Date()._0x0017()
+                    })
+                });
+
+                if (!_0x0033._0x0077) {
+                    throw new Error(`HTTP错误: ${_0x0033._0x0049} ${_0x0033._0x0021}`);
+                }
+
+                const _0x005b = await _0x0033._0x005a();
+                const _0x0013 = typeof _0x005b === _0xdecode('b2JqZWN0') ? JSON.stringify(_0x005b, null, 2) : String(_0x005b);
+                _0x0000(_0x0013, false);
+            } catch (_0x0055) {
+                _0x0000(_0x0055._0x003b, true);
+            }
+        }
+
+        // HTML转义
+        function _0x001d(_0x0066) {
+            const _0x0072 = document.createElement(_0xdecode('ZGl2'));
+            _0x0072.textContent = _0x0066;
+            return _0x0072.innerHTML;
+        }
+
+        // 命令行输入事件
+        _0x0014.addEventListener(_0xdecode('a2V5ZG93bg=='), function(_0x0078) {
+            // 在 /_0x0068 会话模式下，_0x0062 + _0x007b 作为退出“程序”
+            if (_0x0004 && _0x0078._0x006a === _0xdecode('Yw==') && _0x0078._0x0047) {
+                _0x0078._0x000c();
+                _0x0002(_0xdecode('XkM='), '', false, false);
+                _0x0008();
+                _0x0014.value = '';
+                return;
+            }
+
+            if (_0x0078._0x006a === _0xdecode('RW50ZXI=')) {
+                _0x0078._0x000c();
+                const _0x0048 = _0x0014.value._0x005e();
+                if (!_0x0048) return;
+
+                // 在会话模式中：
+                //  - 以 / 开头的仍当作命令（可以执行 /_0x0068 _0x005c /_0x005f 等）
+                //  - 普通文本视为要发送的消息
+                if (_0x0004) {
+                    if (_0x0048._0x001b(_0xdecode('Lw=='))) {
+                        _0x000f(_0x0048);
+                    } else {
+                        // 显示输入的内容
+                        _0x0002(_0x0048, '', false, false);
+
+                        // 标记为发送中
+                        _0x0001(_0xdecode('W1NlbmRpbmdd'));
+
+                        if (_0x0023 && _0x0023._0x0027) {
+                            _0x0023.emit(_0xdecode('Y2xpZW50X21lc3NhZ2U='), {
+                                _0x0066: _0x0048,
+                                _0x002a: new Date()._0x0017()
+                            });
+                        } else {
+                            // 如果会话意外断开，不再回退到 HTTP，直接提示错误
+                            _0x0001('');
+                            _0x0002(_0xdecode('W3N5c3RlbV0='), _0xdecode('5a6e5pe25Lya6K+d5pyq6L+e5o6l77yM6K+36YeN5paw5omn6KGMIC9zZW5kIHN0YXJ044CC'), false, false);
+                        }
+                    }
+                } else {
+                    // 普通模式，全部走命令解析
+                    _0x000f(_0x0048);
+                }
+
+                _0x0014.value = '';
+            }
+        });
+
+        // 启动 /_0x0068 实时会话
+        function _0x0005() {
+            if (_0x0004) {
+                _0x0000(_0xdecode('5bey57uP5ZyoIC9zZW5kIOWunuaXtuS8muivneaooeW8j+S4reOAgg=='), false);
+                return;
+            }
+
+            try {
+                // 关闭自动重连，避免在后台关闭时反复触发 _0x000e
+                _0x0023 = io(_0x001f, {
+                    _0x0067: _0xdecode('L3NvY2tldC5pbw=='),
+                    _0x0015: false
+                });
+            } catch (_0x0055) {
+                _0x0000(_0xdecode('5peg5rOV5bu656uL5a6e5pe25Lya6K+d6L+e5o6l44CC'), true);
+                return;
+            }
+
+            _0x0023.on(_0xdecode('Y29ubmVjdA=='), () => {
+                _0x0004 = true;
+                _0x0000(_0xdecode('5bey6L+b5YWlIC9zZW5kIOWunuaXtuS8muivneaooeW8j++8jOebtOaOpei+k+WFpeWGheWuueW5tuWbnui9puWPkemAge+8jEN0cmwrQyDpgIDlh7rjgII='), false);
+            });
+
+            // 后端确认收到某条消息：只用于把 [_0x0043] 改成 [_0x0075]
+            _0x0023.on(_0xdecode('c2VydmVyX2Fjaw=='), (_0x005b) => {
+                // 当前简单处理为：始终把最后一条用户消息标记为 [_0x0075]
+                _0x0001(_0xdecode('W09LXQ=='));
+            });
+
+            _0x0023.on(_0xdecode('c2VydmVyX21lc3NhZ2U='), (_0x005b) => {
+                const _0x0066 = typeof _0x005b === _0xdecode('b2JqZWN0') && _0x005b !== null ? (_0x005b._0x0066 || JSON.stringify(_0x005b)) : String(_0x005b);
+                _0x0002(_0xdecode('W3NlcnZlcl0='), _0x0066, false, false);
+            });
+
+            _0x0023.on(_0xdecode('ZGlzY29ubmVjdA=='), () => {
+                _0x0004 = false;
+                _0x0023 = null;
+                _0x0002(_0xdecode('W3N5c3RlbV0='), _0xdecode('5bey6YCA5Ye6IC9zZW5kIOWunuaXtuS8muivneaooeW8j+OAgg=='), false, false);
+            });
+
+            _0x0023.on(_0xdecode('Y29ubmVjdF9lcnJvcg=='), () => {
+                // 连接失败，确保不处于会话模式，相当于自动退出程序
+                _0x0004 = false;
+                _0x0023 = null;
+                _0x0001('');
+                _0x0000(_0xdecode('5a6e5pe25Lya6K+d6L+e5o6l5aSx6LSl44CC'), true);
+            });
+        }
+
+        // 退出 /_0x0068 实时会话
+        function _0x0008() {
+            if (_0x0023) {
+                _0x0023.disconnect();
+            } else {
+                _0x0000(_0xdecode('5b2T5YmN5LiN5ZyoIC9zZW5kIOWunuaXtuS8muivneaooeW8j+S4reOAgg=='), false);
+            }
+        }
+
+
+        function _0x0003() {
+            const _0x0022 = new Date(_0xdecode('MjAyNi0wMS0xMA=='));
+            const _0x004f = new Date();
+            _0x004f._0x003a(0, 0, 0, 0);
+            _0x0022._0x003a(0, 0, 0, 0);
+            
+            const _0x0036 = Math._0x0064((_0x0022._0x0044() - _0x004f._0x0044()) / (1000 * 60 * 60 * 24));
+            const _0x001a = document.getElementById(_0xdecode('ZGF0ZUNvdW50ZXI='));
+            
+            if (_0x0036 > 0) {
+                _0x001a.textContent = `距离 2026.1.10 还有 ${_0x0036} 天`;
+            } else if (_0x0036 === 0) {
+                _0x001a.textContent = `今天是 2026.1.10`;
+            } else {
+                _0x001a.textContent = `距离 2026.1.10 已过去 ${Math._0x0070(_0x0036)} 天`;
+            }
+        }
+
+        window.addEventListener(_0xdecode('bG9hZA=='), function() {
+            _0x0014._0x0051();
+            _0x0003();
+            
+            const _0x0071 = new Date();
+            const _0x0031 = new Date(_0x0071);
+            _0x0031._0x0042(_0x0031._0x0046() + 1);
+            _0x0031._0x003a(0, 0, 0, 0);
+            
+            setTimeout(function() {
+                _0x0003();
+                setInterval(_0x0003, 24 * 60 * 60 * 1000);
+            }, _0x0031._0x0044() - _0x0071._0x0044());
+        });
+    </script>
+</body>
+</html>
+
